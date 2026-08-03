@@ -53,16 +53,17 @@
             text-align: center;
             font-size: 0.9rem;
             color: var(--text-muted);
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-weight: bold;
         }
 
-        /* Sync Status Anzeige */
-        #syncStatus {
+        /* Hinweis zur Datenpflege */
+        .data-info {
             text-align: center;
             font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-bottom: 15px;
+            color: var(--tvk-orange);
+            margin-bottom: 20px;
+            font-weight: bold;
         }
 
         /* Mannschafts-Tabs */
@@ -293,7 +294,7 @@
 <div class="container">
     <h2>TV Kapellen 1919 e.V.</h2>
     <div class="subtitle" id="leagueSubtitle">Ligamanager & Spieltagsübersicht</div>
-    <div id="syncStatus">Datenpflege & Bereitstellung: Jürgen Schützendorf</div>
+    <div class="data-info">Datenpflege & Bereitstellung: Jürgen Schützendorf</div>
 
     <!-- Mannschafts-Tabs -->
     <div class="team-tabs" id="teamTabs">
@@ -467,7 +468,7 @@
 
     let activeTeamIndex = 0;
 
-    // Daten von JSONBin laden beim Start
+    // Daten von JSONBin laden beim Start (im Hintergrund)
     async function loadFromCloud() {
         try {
             let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
@@ -476,7 +477,6 @@
             if (response.ok) {
                 let result = await response.json();
                 if (result.record) {
-                    // Match-Daten und Spieltage in die feste Struktur mergen
                     for (let key in leagueData) {
                         if (result.record[key]) {
                             if (result.record[key].currentMatchday) {
@@ -487,22 +487,18 @@
                             }
                         }
                     }
-                    document.getElementById('syncStatus').textContent = '🟢 Live-Daten aus Cloud geladen';
                 }
-            } else {
-                document.getElementById('syncStatus').textContent = '⚠️ Konnte Cloud nicht laden, nutze lokale Ansicht';
             }
         } catch (e) {
-            document.getElementById('syncStatus').textContent = '⚠️ Offline-Modus / Netzwerkfehler';
+            console.log('Netzwerkfehler beim Laden');
         }
         renderAll();
     }
 
     // Daten zu JSONBin speichern
     async function saveToCloud() {
-        document.getElementById('syncStatus').textContent = '💾 Speichere in Cloud...';
         try {
-            let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+            await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -510,13 +506,8 @@
                 },
                 body: JSON.stringify(leagueData)
             });
-            if (response.ok) {
-                document.getElementById('syncStatus').textContent = '🟢 Änderungen in Cloud gespeichert';
-            } else {
-                document.getElementById('syncStatus').textContent = '❌ Fehler beim Speichern in der Cloud';
-            }
         } catch (e) {
-            document.getElementById('syncStatus').textContent = '❌ Netzwerkfehler beim Speichern';
+            console.log('Netzwerkfehler beim Speichern');
         }
     }
 
