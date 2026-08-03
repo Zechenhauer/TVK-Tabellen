@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Kapellen 1919 — Ligen & Tabellen</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --border-color: #333333;
+            --primary: #990000;
+            --primary-hover: #b30000;
+            --accent-green: #81c784;
+            --accent-red: #ef5350;
+            --tvk-orange: #ffa726;
+            --tvk-blue: #42a5f5;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: var(--tvk-orange);
+            text-transform: uppercase;
+            font-size: 1.4rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* Sync Status Anzeige */
+        #syncStatus {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        /* Mannschafts-Tabs */
+        .team-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 700px) {
+            .team-tabs { grid-template-columns: 1fr; }
+        }
+        .team-tab {
+            background: #252525;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+        }
+        .team-tab span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+        .team-tab:hover { border-color: var(--tvk-orange); }
+        .team-tab.active {
+            background: var(--tvk-orange);
+            color: #000;
+            border-color: var(--tvk-orange);
+        }
+        .team-tab.active span {
+            color: #333;
+        }
+
+        /* Sektionen */
+        .section-box {
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            background-color: var(--primary);
+            color: #fff;
+            padding: 10px 15px;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .matchday-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .matchday-btn {
+            background: #252525;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .matchday-btn:hover { background: var(--primary); }
+
+        /* Spiele-Liste */
+        .match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .match-row {
+            background: #252525;
+            padding: 12px 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+        .match-teams {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .home-team { text-align: right; width: 35%; }
+        .away-team { text-align: left; width: 35%; }
+        .match-result { 
+            text-align: center; 
+            width: 30%; 
+            font-weight: bold; 
+            color: #fff;
+            background: #1a1a1a;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            font-size: 0.8rem;
+        }
+        .tvk-highlight-1 { color: var(--tvk-orange) !important; font-weight: bold; }
+        .tvk-highlight-2 { color: var(--tvk-blue) !important; font-weight: bold; }
+
+        /* Tabellen-Ansicht */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+        th {
+            background-color: var(--primary);
+            color: #fff;
+            padding: 10px 8px;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        tr:hover { background-color: rgba(255,255,255,0.02); }
+
+        tr.rank-first td {
+            background: rgba(129, 199, 132, 0.08);
+            color: #a5d6a7;
+        }
+        tr.rank-last td {
+            background: rgba(239, 83, 80, 0.08);
+            color: #ef9a9a;
+        }
+
+        tr.tvk-team-2 td {
+            font-weight: bold;
+            color: var(--tvk-orange);
+            background: rgba(255, 167, 38, 0.06);
+        }
+        tr.tvk-team-3 td {
+            font-weight: bold;
+            color: var(--tvk-blue);
+            background: rgba(66, 165, 245, 0.06);
+        }
+
+        /* Admin / Eingabemasken */
+        .admin-card {
+            background: #252525;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 2fr repeat(6, 1fr);
+            gap: 8px;
+            align-items: end;
+        }
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .form-control:focus { border-color: var(--tvk-orange); outline: none; }
+
+        .btn {
+            background: var(--tvk-orange);
+            color: #000;
+            border: none;
+            padding: 9px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        .btn:hover { background: #fb8c00; }
+        
+        .btn-danger {
+            background: transparent;
+            border: none;
+            color: var(--accent-red);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>TV Kapellen 1919 e.V.</h2>
+    <div class="subtitle" id="leagueSubtitle">Ligamanager & Spieltagsübersicht</div>
+    <div id="syncStatus">Lade Daten aus der Cloud...</div>
+
+    <!-- Mannschafts-Tabs -->
+    <div class="team-tabs" id="teamTabs">
+        <div class="team-tab active" onclick="switchTeam(0)">
+            1. Mannschaft
+            <span>Bezirksliga 03</span>
+        </div>
+        <div class="team-tab" onclick="switchTeam(1)">
+            2. & 3. Mannschaft
+            <span>Bezirksklasse 05</span>
+        </div>
+        <div class="team-tab" onclick="switchTeam(2)">
+            4. Mannschaft
+            <span>Kreisliga 08</span>
+        </div>
+    </div>
+
+    <!-- SPIELTAGS-ANSICHT -->
+    <div class="section-box">
+        <div class="section-header">Spiele</div>
+        <div class="matchday-controls">
+            <button class="matchday-btn" onclick="changeMatchday(-1)">◀ Vorheriger Spieltag</button>
+            <strong id="matchdayDisplay" style="color: var(--tvk-orange); font-size: 1.1rem;">Spieltag 1</strong>
+            <button class="matchday-btn" onclick="changeMatchday(1)">Nächster Spieltag ▶</button>
+        </div>
+        <div class="match-list" id="matchListContainer">
+            <!-- Wird dynamisch gefüllt -->
+        </div>
+    </div>
+
+    <!-- TABELLEN-ANSICHT -->
+    <div class="section-box">
+        <div class="section-header">Tabelle</div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 35px;">Pl.</th>
+                        <th>Mannschaft</th>
+                        <th style="text-align: center;">Spiele</th>
+                        <th style="text-align: center;">S</th>
+                        <th style="text-align: center;">U</th>
+                        <th style="text-align: center;">N</th>
+                        <th style="text-align: center;">Punkte</th>
+                        <th style="text-align: center;">Sets</th>
+                        <th style="text-align: center;">Legs</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Wird automatisch aus Spieltagen berechnet -->
+                </tbody>
+            </table>
+        </div>
+        <div style="display: flex; gap: 15px; margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: rgba(129, 199, 132, 0.2); border-radius: 2px; display: inline-block;"></span> Aufstiegsplatz</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: rgba(239, 83, 80, 0.2); border-radius: 2px; display: inline-block;"></span> Abstiegsplatz</div>
+        </div>
+    </div>
+
+    <!-- ERGEBNIS EINTRAGEN / BEARBEITEN -->
+    <div class="admin-card">
+        <div style="font-weight: bold; color: var(--tvk-orange); margin-bottom: 10px; text-transform: uppercase; font-size: 0.85rem;">
+            ✏️ Spielergebnis für aktuellen Spieltag erfassen
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Heimmannschaft</label>
+                <select id="homeTeamSelect" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>Gastmannschaft</label>
+                <select id="awayTeamSelect" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>Erg. Heim</label>
+                <input type="number" id="homeScore" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Erg. Gast</label>
+                <input type="number" id="awayScore" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Sets Heim</label>
+                <input type="number" id="homeSets" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Sets Gast</label>
+                <input type="number" id="awaySets" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Legs Heim</label>
+                <input type="number" id="homeLegs" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Legs Gast</label>
+                <input type="number" id="awayLegs" class="form-control" value="0" min="0">
+            </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Format: Ergebnis (Partien) | Sets | Legs getrennt eintragen</div>
+            <button class="btn" onclick="saveMatch()">Spielergebnis speichern</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BIN_ID = '6a703ae9da38895dfeb258db';
+    const API_KEY = '$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS';
+
+    let leagueData = {
+        "team_1": {
+            name: "1. Mannschaft",
+            leagueName: "Bezirksliga 03",
+            currentMatchday: 1,
+            teams: [
+                "1. Dart Club Lobberich 1988 e.V. 3",
+                "1.Dartsportverein Jülich e.V.",
+                "1.SDVW Ocky Bullboa e.V. 1",
+                "Dart Simpsons",
+                "Hot Shots Neuss 3",
+                "Kaiser Dart Aachen 2",
+                "Kaiser Dart Aachen 3",
+                "Rumelner TV 2",
+                "SDC Dart Vaders Kempen",
+                "TV Kapellen 1919 e.V. 1"
+            ],
+            matches: {}
+        },
+        "team_2_3": {
+            name: "2. & 3. Mannschaft",
+            leagueName: "Bezirksklasse 05",
+            currentMatchday: 1,
+            teams: [
+                "DSC Goch 3",
+                "DSC Goch 4",
+                "Die Wardter Darter",
+                "Hart am Draht",
+                "Rumelner TV 3",
+                "SV Menzelen 1925",
+                "TV Kapellen 1919 e.V. 2",
+                "TV Kapellen 1919 e.V. 3",
+                "The Red Lions Xanten 1",
+                "Triple Inn Issum 2"
+            ],
+            matches: {}
+        },
+        "team_4": {
+            name: "4. Mannschaft",
+            leagueName: "Kreisliga 08",
+            currentMatchday: 1,
+            teams: [
+                "26er DC",
+                "Berka Darts 2",
+                "Dart-Devils Mülheim 2004 e.V. 3",
+                "Gelderner DC 5",
+                "Glück Auf Homberg 2025 2",
+                "Green Arrows 1420 3",
+                "Rumelner TV 4",
+                "TKD Duisburg 1885 e.V. 2",
+                "TV Kapellen 1919 e.V. 4"
+            ],
+            matches: {}
+        }
+    };
+
+    let teamConfigs = [
+        { name: "1. Mannschaft", key: "team_1" },
+        { name: "2. & 3. Mannschaft", key: "team_2_3" },
+        { name: "4. Mannschaft", key: "team_4" }
+    ];
+
+    let activeTeamIndex = 0;
+
+    // Daten von JSONBin laden beim Start
+    async function loadFromCloud() {
+        try {
+            let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': API_KEY }
+            });
+            if (response.ok) {
+                let result = await response.json();
+                if (result.record) {
+                    // Match-Daten und Spieltage in die feste Struktur mergen
+                    for (let key in leagueData) {
+                        if (result.record[key]) {
+                            if (result.record[key].currentMatchday) {
+                                leagueData[key].currentMatchday = result.record[key].currentMatchday;
+                            }
+                            if (result.record[key].matches) {
+                                leagueData[key].matches = result.record[key].matches;
+                            }
+                        }
+                    }
+                    document.getElementById('syncStatus').textContent = '🟢 Live-Daten aus Cloud geladen';
+                }
+            } else {
+                document.getElementById('syncStatus').textContent = '⚠️ Konnte Cloud nicht laden, nutze lokale Ansicht';
+            }
+        } catch (e) {
+            document.getElementById('syncStatus').textContent = '⚠️ Offline-Modus / Netzwerkfehler';
+        }
+        renderAll();
+    }
+
+    // Daten zu JSONBin speichern
+    async function saveToCloud() {
+        document.getElementById('syncStatus').textContent = '💾 Speichere in Cloud...';
+        try {
+            let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': API_KEY
+                },
+                body: JSON.stringify(leagueData)
+            });
+            if (response.ok) {
+                document.getElementById('syncStatus').textContent = '🟢 Änderungen in Cloud gespeichert';
+            } else {
+                document.getElementById('syncStatus').textContent = '❌ Fehler beim Speichern in der Cloud';
+            }
+        } catch (e) {
+            document.getElementById('syncStatus').textContent = '❌ Netzwerkfehler beim Speichern';
+        }
+    }
+
+    function switchTeam(index) {
+        activeTeamIndex = index;
+        document.querySelectorAll('.team-tab').forEach((tab, idx) => {
+            if (idx === index) tab.classList.add('active');
+            else tab.classList.remove('active');
+        });
+        renderAll();
+    }
+
+    function changeMatchday(amount) {
+        let league = getCurrentLeague();
+        league.currentMatchday = Math.max(1, league.currentMatchday + amount);
+        saveAndSync();
+    }
+
+    function getCurrentLeague() {
+        return leagueData[teamConfigs[activeTeamIndex].key];
+    }
+
+    function renderAll() {
+        let league = getCurrentLeague();
+        document.getElementById('matchdayDisplay').textContent = `Spieltag ${league.currentMatchday}`;
+        document.getElementById('leagueSubtitle').textContent = `${league.name} — ${league.leagueName}`;
+        
+        renderMatches();
+        renderTable();
+        renderDropdowns();
+    }
+
+    function renderMatches() {
+        let league = getCurrentLeague();
+        let container = document.getElementById('matchListContainer');
+        container.innerHTML = '';
+
+        let matchdayMatches = league.matches[league.currentMatchday] || [];
+
+        if (matchdayMatches.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px;">Noch keine Spiele für Spieltag ${league.currentMatchday} erfasst.</div>`;
+            return;
+        }
+
+        matchdayMatches.forEach((m, idx) => {
+            let isHomeTvk2 = m.home.includes('TV Kapellen 1919 e.V. 2');
+            let isAwayTvk2 = m.away.includes('TV Kapellen 1919 e.V. 2');
+            let isHomeTvk3 = m.home.includes('TV Kapellen 1919 e.V. 3');
+            let isAwayTvk3 = m.away.includes('TV Kapellen 1919 e.V. 3');
+            let isHomeTvkGeneral = m.home.toLowerCase().includes('kapellen');
+            let isAwayTvkGeneral = m.away.toLowerCase().includes('kapellen');
+
+            let homeClass = isHomeTvk2 ? 'tvk-highlight-1' : (isHomeTvk3 ? 'tvk-highlight-2' : (isHomeTvkGeneral ? 'tvk-highlight-1' : ''));
+            let awayClass = isAwayTvk2 ? 'tvk-highlight-1' : (isAwayTvk3 ? 'tvk-highlight-2' : (isAwayTvkGeneral ? 'tvk-highlight-1' : ''));
+
+            let row = document.createElement('div');
+            row.className = 'match-row';
+            row.innerHTML = `
+                <div class="match-teams">
+                    <div class="home-team ${homeClass}">${m.home}</div>
+                    <div class="match-result">${m.homeScore}:${m.awayScore} | S:${m.homeSets}:${m.awaySets} | L:${m.homeLegs}:${m.awayLegs}</div>
+                    <div class="away-team ${awayClass}">${m.away}</div>
+                </div>
+                <button class="btn-danger" onclick="deleteMatch(${idx})" title="Löschen" style="margin-left: 10px;">✕</button>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function renderTable() {
+        let league = getCurrentLeague();
+        let tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        let stats = {};
+        league.teams.forEach(t => {
+            stats[t] = { name: t, played: 0, won: 0, draw: 0, lost: 0, pointsW: 0, pointsL: 0, setsW: 0, setsL: 0, legsW: 0, legsL: 0 };
+        });
+
+        Object.values(league.matches).forEach(matchdayList => {
+            matchdayList.forEach(m => {
+                if (!stats[m.home] || !stats[m.away]) return;
+
+                stats[m.home].played++;
+                stats[m.away].played++;
+
+                stats[m.home].setsW += m.homeSets;
+                stats[m.home].setsL += m.awaySets;
+                stats[m.away].setsW += m.awaySets;
+                stats[m.away].setsL += m.homeSets;
+
+                stats[m.home].legsW += m.homeLegs;
+                stats[m.home].legsL += m.awayLegs;
+                stats[m.away].legsW += m.awayLegs;
+                stats[m.away].legsL += m.homeLegs;
+
+                if (m.homeScore > m.awayScore) {
+                    stats[m.home].won++;
+                    stats[m.home].pointsW += 2;
+                    stats[m.away].lost++;
+                    stats[m.away].pointsL += 2;
+                } else if (m.homeScore < m.awayScore) {
+                    stats[m.away].won++;
+                    stats[m.away].pointsW += 2;
+                    stats[m.home].lost++;
+                    stats[m.home].pointsL += 2;
+                } else {
+                    stats[m.home].draw++;
+                    stats[m.home].pointsW++;
+                    stats[m.home].pointsL++;
+                    stats[m.away].draw++;
+                    stats[m.away].pointsW++;
+                    stats[m.away].pointsL++;
+                }
+            });
+        });
+
+        let sorted = Object.values(stats).sort((a, b) => {
+            if (b.pointsW !== a.pointsW) return b.pointsW - a.pointsW;
+            let setDiffB = (b.setsW - b.setsL);
+            let setDiffA = (a.setsW - a.setsL);
+            if (setDiffB !== setDiffA) return setDiffB - setDiffA;
+            return (b.legsW - b.legsL) - (a.legsW - a.legsL);
+        });
+
+        sorted.forEach((s, idx) => {
+            let tr = document.createElement('tr');
+            
+            if (idx === 0) {
+                tr.classList.add('rank-first');
+            } else if (idx === sorted.length - 1 && sorted.length > 1) {
+                tr.classList.add('rank-last');
+            }
+
+            if (s.name.includes('TV Kapellen 1919 e.V. 2')) {
+                tr.classList.add('tvk-team-2');
+            } else if (s.name.includes('TV Kapellen 1919 e.V. 3')) {
+                tr.classList.add('tvk-team-3');
+            } else if (s.name.toLowerCase().includes('kapellen')) {
+                tr.classList.add('tvk-team-2');
+            }
+
+            let setDiff = s.setsW - s.setsL;
+            let legDiff = s.legsW - s.legsL;
+
+            tr.innerHTML = `
+                <td><strong>${idx + 1}.</strong></td>
+                <td>${s.name}</td>
+                <td style="text-align: center;">${s.played}</td>
+                <td style="text-align: center;">${s.won}</td>
+                <td style="text-align: center;">${s.draw}</td>
+                <td style="text-align: center;">${s.lost}</td>
+                <td style="text-align: center; font-weight: bold;">${s.pointsW}:${s.pointsL}</td>
+                <td style="text-align: center;">${s.setsW}:${s.setsL} <span style="color:var(--text-muted); font-size:0.75rem;">(${setDiff > 0 ? '+' : ''}${setDiff})</span></td>
+                <td style="text-align: center;">${s.legsW}:${s.legsL} <span style="color:var(--text-muted); font-size:0.75rem;">(${legDiff > 0 ? '+' : ''}${legDiff})</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderDropdowns() {
+        let league = getCurrentLeague();
+        let homeSelect = document.getElementById('homeTeamSelect');
+        let awaySelect = document.getElementById('awayTeamSelect');
+
+        homeSelect.innerHTML = '';
+        awaySelect.innerHTML = '';
+
+        league.teams.forEach(t => {
+            homeSelect.innerHTML += `<option value="${t}">${t}</option>`;
+            awaySelect.innerHTML += `<option value="${t}">${t}</option>`;
+        });
+        if (league.teams.length > 1) awaySelect.selectedIndex = 1;
+    }
+
+    function saveMatch() {
+        let league = getCurrentLeague();
+        let home = document.getElementById('homeTeamSelect').value;
+        let away = document.getElementById('awayTeamSelect').value;
+
+        if (home === away) {
+            alert('Heim- und Gastmannschaft müssen unterschiedlich sein!');
+            return;
+        }
+
+        let homeScore = parseInt(document.getElementById('homeScore').value) || 0;
+        let awayScore = parseInt(document.getElementById('awayScore').value) || 0;
+        let homeSets = parseInt(document.getElementById('homeSets').value) || 0;
+        let awaySets = parseInt(document.getElementById('awaySets').value) || 0;
+        let homeLegs = parseInt(document.getElementById('homeLegs').value) || 0;
+        let awayLegs = parseInt(document.getElementById('awayLegs').value) || 0;
+
+        if (!league.matches[league.currentMatchday]) {
+            league.matches[league.currentMatchday] = [];
+        }
+
+        league.matches[league.currentMatchday].push({ home, away, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
+        saveAndSync();
+    }
+
+    function deleteMatch(matchIndex) {
+        let league = getCurrentLeague();
+        if (confirm('Dieses Spiel wirklich löschen?')) {
+            league.matches[league.currentMatchday].splice(matchIndex, 1);
+            saveAndSync();
+        }
+    }
+
+    function saveAndSync() {
+        renderAll();
+        saveToCloud();
+    }
+
+    // Beim Start Daten aus Cloud laden
+    loadFromCloud();
+</script>
+
+</body>
+</html>
