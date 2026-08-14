@@ -246,13 +246,34 @@
             background: rgba(66, 165, 245, 0.06);
         }
 
+        /* Admin-Toggle-Button unten */
+        .admin-toggle-wrapper {
+            text-align: right;
+            margin-top: 15px;
+        }
+        .admin-toggle-btn {
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .admin-toggle-btn:hover {
+            color: var(--tvk-orange);
+            border-color: var(--tvk-orange);
+        }
+
         /* Admin / Eingabemasken */
         .admin-card {
             background: #252525;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--tvk-orange);
             border-radius: 8px;
             padding: 15px;
             margin-top: 15px;
+            display: none; /* Standardmäßig versteckt */
         }
         .match-input-card {
             background: #1a1a1a;
@@ -389,10 +410,11 @@
         </div>
     </div>
 
-    <!-- ERGEBNISSE EINTRAGEN / BEARBEITEN FORMPLAN -->
-    <div class="admin-card">
-        <div style="font-weight: bold; color: var(--tvk-orange); margin-bottom: 12px; text-transform: uppercase; font-size: 0.85rem;">
-            ✏️ Ergebnisse für <span id="adminMatchdayLabel">Spieltag 1</span> erfassen
+    <!-- ERGEBNISSE EINTRAGEN / BEARBEITEN (Versteckt bis Admin-PIN eingegeben wird) -->
+    <div class="admin-card" id="adminCard">
+        <div style="font-weight: bold; color: var(--tvk-orange); margin-bottom: 12px; text-transform: uppercase; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>✏️ Ergebnisse für <span id="adminMatchdayLabel">Spieltag 1</span> erfassen</span>
+            <span style="font-size: 0.7rem; color: var(--accent-green);">● Admin-Modus Aktiv</span>
         </div>
         
         <div id="matchInputsContainer">
@@ -401,11 +423,20 @@
 
         <button class="btn" onclick="saveAllMatches()">Alle Ergebnisse für diesen Spieltag speichern</button>
     </div>
+
+    <!-- ADMIN SCHALTER UNTEN -->
+    <div class="admin-toggle-wrapper">
+        <button class="admin-toggle-btn" onclick="toggleAdminMode()">⚙️ Admin-Zugang</button>
+    </div>
 </div>
 
 <script>
     const BIN_ID = '6a703ae9da38895dfeb258db';
     const API_KEY = '$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS';
+    
+    // Deines gewünschtes Admin-Passwort (hier anpassbar)
+    const ADMIN_PIN = "1919";
+    let isAdmin = false;
 
     let leagueData = {
         "team_1": {
@@ -470,6 +501,27 @@
     ];
 
     let activeTeamIndex = 0;
+
+    // Admin-Modus Ein-/Ausschalten
+    function toggleAdminMode() {
+        const adminCard = document.getElementById('adminCard');
+        
+        if (isAdmin) {
+            isAdmin = false;
+            adminCard.style.display = 'none';
+            renderMatches(); // Löschen-Buttons ausblenden
+            return;
+        }
+
+        let enteredPin = prompt("Bitte Admin-PIN eingeben:");
+        if (enteredPin === ADMIN_PIN) {
+            isAdmin = true;
+            adminCard.style.display = 'block';
+            renderAll();
+        } else if (enteredPin !== null) {
+            alert("Falsche PIN!");
+        }
+    }
 
     // Hilfsfunktion: Erzeugt Paarungen für einen Spieltag (Round-Robin)
     function generateMatchdayPairs(teams, matchday) {
@@ -567,7 +619,7 @@
         
         renderMatches();
         renderTable();
-        renderInputForm();
+        if (isAdmin) renderInputForm();
     }
 
     function renderMatches() {
@@ -593,6 +645,8 @@
             let homeClass = isHomeTvk2 ? 'tvk-highlight-1' : (isHomeTvk3 ? 'tvk-highlight-2' : (isHomeTvkGeneral ? 'tvk-highlight-1' : ''));
             let awayClass = isAwayTvk2 ? 'tvk-highlight-1' : (isAwayTvk3 ? 'tvk-highlight-2' : (isAwayTvkGeneral ? 'tvk-highlight-1' : ''));
 
+            let deleteBtnHtml = isAdmin ? `<button class="btn-danger" onclick="deleteMatch(${idx})" title="Löschen" style="margin-left: 10px;">✕</button>` : '';
+
             let row = document.createElement('div');
             row.className = 'match-row';
             row.innerHTML = `
@@ -601,7 +655,7 @@
                     <div class="match-result">${m.homeScore}:${m.awayScore} | S:${m.homeSets}:${m.awaySets} | L:${m.homeLegs}:${m.awayLegs}</div>
                     <div class="away-team ${awayClass}">${m.away}</div>
                 </div>
-                <button class="btn-danger" onclick="deleteMatch(${idx})" title="Löschen" style="margin-left: 10px;">✕</button>
+                ${deleteBtnHtml}
             `;
             container.appendChild(row);
         });
@@ -698,7 +752,6 @@
         });
     }
 
-    // Rendert alle 4 bzw. 5 Begegnungen für das Formular
     function renderInputForm() {
         let league = getCurrentLeague();
         let container = document.getElementById('matchInputsContainer');
@@ -776,7 +829,6 @@
             let homeLegs = parseInt(document.getElementById(`hlegs_${idx}`).value) || 0;
             let awayLegs = parseInt(document.getElementById(`alegs_${idx}`).value) || 0;
 
-            // Nur Spiele speichern, bei denen Werte oder ungleiche Teams eingestellt sind
             if (home !== away) {
                 newMatches.push({ home, away, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
             }
