@@ -49,7 +49,6 @@
             margin-bottom: 5px;
         }
 
-        /* Erzwingt runde Form mit orangenem Rahmen für die Wappen/Logos */
         .header-logo {
             width: 55px;
             height: 55px;
@@ -76,15 +75,6 @@
             font-size: 0.9rem;
             color: var(--text-muted);
             margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        /* Hinweis zur Datenpflege */
-        .data-info {
-            text-align: center;
-            font-size: 0.75rem;
-            color: var(--tvk-orange);
-            margin-bottom: 20px;
             font-weight: bold;
         }
 
@@ -264,6 +254,19 @@
             padding: 15px;
             margin-top: 15px;
         }
+        .match-input-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        .match-input-title {
+            font-size: 0.8rem;
+            color: var(--tvk-orange);
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
         .form-grid {
             display: grid;
             grid-template-columns: 2fr 2fr repeat(6, 1fr);
@@ -271,23 +274,24 @@
             align-items: end;
         }
         @media (max-width: 900px) {
-            .form-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr 1fr; }
+            .form-grid .form-group-team { grid-column: span 2; }
         }
         .form-group label {
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
             margin-bottom: 3px;
             text-transform: uppercase;
         }
         .form-control {
             width: 100%;
-            padding: 8px;
-            background: #1a1a1a;
+            padding: 6px;
+            background: #121212;
             border: 1px solid var(--border-color);
             color: var(--text-color);
             border-radius: 4px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
         .form-control:focus { border-color: var(--tvk-orange); outline: none; }
 
@@ -295,12 +299,14 @@
             background: var(--tvk-orange);
             color: #000;
             border: none;
-            padding: 9px 15px;
+            padding: 10px 18px;
             border-radius: 4px;
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
+            width: 100%;
+            margin-top: 10px;
         }
         .btn:hover { background: #fb8c00; }
         
@@ -383,49 +389,17 @@
         </div>
     </div>
 
-    <!-- ERGEBNIS EINTRAGEN / BEARBEITEN -->
+    <!-- ERGEBNISSE EINTRAGEN / BEARBEITEN FORMPLAN -->
     <div class="admin-card">
-        <div style="font-weight: bold; color: var(--tvk-orange); margin-bottom: 10px; text-transform: uppercase; font-size: 0.85rem;">
-            ✏️ Spielergebnis für aktuellen Spieltag erfassen
+        <div style="font-weight: bold; color: var(--tvk-orange); margin-bottom: 12px; text-transform: uppercase; font-size: 0.85rem;">
+            ✏️ Ergebnisse für <span id="adminMatchdayLabel">Spieltag 1</span> erfassen
         </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Heimmannschaft</label>
-                <select id="homeTeamSelect" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label>Gastmannschaft</label>
-                <select id="awayTeamSelect" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label>Erg. Heim</label>
-                <input type="number" id="homeScore" class="form-control" value="0" min="0">
-            </div>
-            <div class="form-group">
-                <label>Erg. Gast</label>
-                <input type="number" id="awayScore" class="form-control" value="0" min="0">
-            </div>
-            <div class="form-group">
-                <label>Sets Heim</label>
-                <input type="number" id="homeSets" class="form-control" value="0" min="0">
-            </div>
-            <div class="form-group">
-                <label>Sets Gast</label>
-                <input type="number" id="awaySets" class="form-control" value="0" min="0">
-            </div>
-            <div class="form-group">
-                <label>Legs Heim</label>
-                <input type="number" id="homeLegs" class="form-control" value="0" min="0">
-            </div>
-            <div class="form-group">
-                <label>Legs Gast</label>
-                <input type="number" id="awayLegs" class="form-control" value="0" min="0">
-            </div>
+        
+        <div id="matchInputsContainer">
+            <!-- Hier werden automatisch 4 bzw. 5 Begegnungen gerendert -->
         </div>
-        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Format: Ergebnis (Partien) | Sets | Legs getrennt eintragen</div>
-            <button class="btn" onclick="saveMatch()">Spielergebnis speichern</button>
-        </div>
+
+        <button class="btn" onclick="saveAllMatches()">Alle Ergebnisse für diesen Spieltag speichern</button>
     </div>
 </div>
 
@@ -497,7 +471,34 @@
 
     let activeTeamIndex = 0;
 
-    // Daten von JSONBin laden beim Start (im Hintergrund)
+    // Hilfsfunktion: Erzeugt Paarungen für einen Spieltag (Round-Robin)
+    function generateMatchdayPairs(teams, matchday) {
+        let list = [...teams];
+        if (list.length % 2 !== 0) list.push("Spielfrei");
+        
+        let numTeams = list.length;
+        let rounds = numTeams - 1;
+        let numMatchesPerRound = numTeams / 2;
+        
+        let roundIndex = (matchday - 1) % rounds;
+        
+        let pairs = [];
+        for (let i = 0; i < numMatchesPerRound; i++) {
+            let home = (roundIndex + i) % (numTeams - 1);
+            let away = (numTeams - 1 - i + roundIndex) % (numTeams - 1);
+            
+            if (i === 0) away = numTeams - 1;
+            
+            let homeTeam = list[home];
+            let awayTeam = list[away];
+            
+            if (homeTeam !== "Spielfrei" && awayTeam !== "Spielfrei") {
+                pairs.push({ home: homeTeam, away: awayTeam });
+            }
+        }
+        return pairs;
+    }
+
     async function loadFromCloud() {
         try {
             let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
@@ -524,7 +525,6 @@
         renderAll();
     }
 
-    // Daten zu JSONBin speichern
     async function saveToCloud() {
         try {
             await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -562,11 +562,12 @@
     function renderAll() {
         let league = getCurrentLeague();
         document.getElementById('matchdayDisplay').textContent = `Spieltag ${league.currentMatchday}`;
+        document.getElementById('adminMatchdayLabel').textContent = `Spieltag ${league.currentMatchday}`;
         document.getElementById('leagueSubtitle').textContent = `${league.name} — ${league.leagueName}`;
         
         renderMatches();
         renderTable();
-        renderDropdowns();
+        renderInputForm();
     }
 
     function renderMatches() {
@@ -697,43 +698,91 @@
         });
     }
 
-    function renderDropdowns() {
+    // Rendert alle 4 bzw. 5 Begegnungen für das Formular
+    function renderInputForm() {
         let league = getCurrentLeague();
-        let homeSelect = document.getElementById('homeTeamSelect');
-        let awaySelect = document.getElementById('awayTeamSelect');
+        let container = document.getElementById('matchInputsContainer');
+        container.innerHTML = '';
 
-        homeSelect.innerHTML = '';
-        awaySelect.innerHTML = '';
+        let defaultPairs = generateMatchdayPairs(league.teams, league.currentMatchday);
+        let existingMatches = league.matches[league.currentMatchday] || [];
 
-        league.teams.forEach(t => {
-            homeSelect.innerHTML += `<option value="${t}">${t}</option>`;
-            awaySelect.innerHTML += `<option value="${t}">${t}</option>`;
+        defaultPairs.forEach((pair, idx) => {
+            let existing = existingMatches.find(m => m.home === pair.home && m.away === pair.away) || existingMatches[idx] || {};
+
+            let homeTeam = existing.home || pair.home;
+            let awayTeam = existing.away || pair.away;
+
+            let card = document.createElement('div');
+            card.className = 'match-input-card';
+
+            let optionsHome = league.teams.map(t => `<option value="${t}" ${t === homeTeam ? 'selected' : ''}>${t}</option>`).join('');
+            let optionsAway = league.teams.map(t => `<option value="${t}" ${t === awayTeam ? 'selected' : ''}>${t}</option>`).join('');
+
+            card.innerHTML = `
+                <div class="match-input-title">Begegnung ${idx + 1}</div>
+                <div class="form-grid">
+                    <div class="form-group form-group-team">
+                        <label>Heimmannschaft</label>
+                        <select id="home_${idx}" class="form-control">${optionsHome}</select>
+                    </div>
+                    <div class="form-group form-group-team">
+                        <label>Gastmannschaft</label>
+                        <select id="away_${idx}" class="form-control">${optionsAway}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Erg. H</label>
+                        <input type="number" id="hs_${idx}" class="form-control" value="${existing.homeScore !== undefined ? existing.homeScore : 0}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Erg. G</label>
+                        <input type="number" id="as_${idx}" class="form-control" value="${existing.awayScore !== undefined ? existing.awayScore : 0}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Sets H</label>
+                        <input type="number" id="hsets_${idx}" class="form-control" value="${existing.homeSets !== undefined ? existing.homeSets : 0}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Sets G</label>
+                        <input type="number" id="asets_${idx}" class="form-control" value="${existing.awaySets !== undefined ? existing.awaySets : 0}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Legs H</label>
+                        <input type="number" id="hlegs_${idx}" class="form-control" value="${existing.homeLegs !== undefined ? existing.homeLegs : 0}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Legs G</label>
+                        <input type="number" id="alegs_${idx}" class="form-control" value="${existing.awayLegs !== undefined ? existing.awayLegs : 0}" min="0">
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
         });
-        if (league.teams.length > 1) awaySelect.selectedIndex = 1;
     }
 
-    function saveMatch() {
+    function saveAllMatches() {
         let league = getCurrentLeague();
-        let home = document.getElementById('homeTeamSelect').value;
-        let away = document.getElementById('awayTeamSelect').value;
+        let defaultPairs = generateMatchdayPairs(league.teams, league.currentMatchday);
+        let newMatches = [];
 
-        if (home === away) {
-            alert('Heim- und Gastmannschaft müssen unterschiedlich sein!');
-            return;
+        for (let idx = 0; idx < defaultPairs.length; idx++) {
+            let home = document.getElementById(`home_${idx}`).value;
+            let away = document.getElementById(`away_${idx}`).value;
+
+            let homeScore = parseInt(document.getElementById(`hs_${idx}`).value) || 0;
+            let awayScore = parseInt(document.getElementById(`as_${idx}`).value) || 0;
+            let homeSets = parseInt(document.getElementById(`hsets_${idx}`).value) || 0;
+            let awaySets = parseInt(document.getElementById(`asets_${idx}`).value) || 0;
+            let homeLegs = parseInt(document.getElementById(`hlegs_${idx}`).value) || 0;
+            let awayLegs = parseInt(document.getElementById(`alegs_${idx}`).value) || 0;
+
+            // Nur Spiele speichern, bei denen Werte oder ungleiche Teams eingestellt sind
+            if (home !== away) {
+                newMatches.push({ home, away, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
+            }
         }
 
-        let homeScore = parseInt(document.getElementById('homeScore').value) || 0;
-        let awayScore = parseInt(document.getElementById('awayScore').value) || 0;
-        let homeSets = parseInt(document.getElementById('homeSets').value) || 0;
-        let awaySets = parseInt(document.getElementById('awaySets').value) || 0;
-        let homeLegs = parseInt(document.getElementById('homeLegs').value) || 0;
-        let awayLegs = parseInt(document.getElementById('awayLegs').value) || 0;
-
-        if (!league.matches[league.currentMatchday]) {
-            league.matches[league.currentMatchday] = [];
-        }
-
-        league.matches[league.currentMatchday].push({ home, away, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
+        league.matches[league.currentMatchday] = newMatches;
         saveAndSync();
     }
 
