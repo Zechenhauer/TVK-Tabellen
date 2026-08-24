@@ -333,7 +333,7 @@
         </div>
     </div>
 
-    <!-- SPIELTAGS-TABELLE (Einzige Spiele-Ansicht mit Datum, Uhrzeit & Ergebnissen) -->
+    <!-- SPIELTAGS-TABELLE (Spiele & Ergebnisse oben) -->
     <div class="section-box">
         <div class="section-header" id="matchdayTableHeader">Spieltag 1 — Spiele & Ergebnisse</div>
         <div class="matchday-controls">
@@ -611,8 +611,9 @@
             return;
         }
 
-        defaultPairs.forEach((pair) => {
-            let savedMatch = existingMatches.find(m => (m.home === pair.home && m.away === pair.away) || (m.home === pair.away && m.away === pair.home));
+        defaultPairs.forEach((pair, idx) => {
+            // Nutze direkt das gespeicherte Spiel an diesem Index oder suche über die Paarung
+            let savedMatch = existingMatches[idx] || existingMatches.find(m => (m.home === pair.home && m.away === pair.away) || (m.home === pair.away && m.away === pair.home));
             
             let homeTeam = savedMatch ? savedMatch.home : pair.home;
             let awayTeam = savedMatch ? savedMatch.away : pair.away;
@@ -647,7 +648,7 @@
                 ? `<strong>${savedMatch.homeScore}:${savedMatch.awayScore}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">S:${savedMatch.homeSets}:${savedMatch.awaySets} | L:${savedMatch.homeLegs}:${savedMatch.awayLegs}</span>` 
                 : `<span style="color: var(--text-muted); font-style: italic;">vs</span>`;
 
-            let deleteBtnHtml = (isAdmin && hasResult) ? `<button class="btn-danger" onclick="deleteMatchByTeams('${homeTeam}', '${awayTeam}')" title="Löschen">✕</button>` : '';
+            let deleteBtnHtml = (isAdmin && hasResult) ? `<button class="btn-danger" onclick="deleteMatchByIndex(${idx})" title="Löschen">✕</button>` : '';
 
             let tr = document.createElement('tr');
             tr.innerHTML = `
@@ -672,21 +673,23 @@
         });
 
         Object.values(league.matches).forEach(matchdayList => {
+            if (!Array.isArray(matchdayList)) return;
             matchdayList.forEach(m => {
-                if (!stats[m.home] || !stats[m.away]) return;
+                if (!m || !stats[m.home] || !stats[m.away]) return;
+                if (m.homeScore === undefined || m.awayScore === undefined) return;
 
                 stats[m.home].played++;
                 stats[m.away].played++;
 
-                stats[m.home].setsW += m.homeSets;
-                stats[m.home].setsL += m.awaySets;
-                stats[m.away].setsW += m.awaySets;
-                stats[m.away].setsL += m.homeSets;
+                stats[m.home].setsW += (m.homeSets || 0);
+                stats[m.home].setsL += (m.awaySets || 0);
+                stats[m.away].setsW += (m.awaySets || 0);
+                stats[m.away].setsL += (m.homeSets || 0);
 
-                stats[m.home].legsW += m.homeLegs;
-                stats[m.home].legsL += m.awayLegs;
-                stats[m.away].legsW += m.awayLegs;
-                stats[m.away].legsL += m.homeLegs;
+                stats[m.home].legsW += (m.homeLegs || 0);
+                stats[m.home].legsL += (m.awayLegs || 0);
+                stats[m.away].legsW += (m.awayLegs || 0);
+                stats[m.away].legsL += (m.homeLegs || 0);
 
                 if (m.homeScore > m.awayScore) {
                     stats[m.home].won++;
@@ -761,7 +764,7 @@
         let existingMatches = league.matches[league.currentMatchday] || [];
 
         defaultPairs.forEach((pair, idx) => {
-            let existing = existingMatches.find(m => m.home === pair.home && m.away === pair.away) || existingMatches[idx] || {};
+            let existing = existingMatches[idx] || existingMatches.find(m => m.home === pair.home && m.away === pair.away) || {};
 
             let homeTeam = existing.home || pair.home;
             let awayTeam = existing.away || pair.away;
@@ -848,11 +851,12 @@
         saveAndSync();
     }
 
-    function deleteMatchByTeams(home, away) {
+    function deleteMatchByIndex(matchIndex) {
         let league = getCurrentLeague();
-        if (league.matches[league.currentMatchday]) {
-            if (confirm(`Ergebnis für ${home} vs ${away} wirklich löschen?`)) {
-                league.matches[league.currentMatchday] = league.matches[league.currentMatchday].filter(m => !(m.home === home && m.away === away));
+        if (league.matches[league.currentMatchday] && league.matches[league.currentMatchday][matchIndex]) {
+            if (confirm(`Ergebnis für diese Begegnung wirklich löschen?`)) {
+                // Setze das Ergebnis des Spiels zurück oder entferne es aus dem Array
+                league.matches[league.currentMatchday].splice(matchIndex, 1);
                 saveAndSync();
             }
         }
