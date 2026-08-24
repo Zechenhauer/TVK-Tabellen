@@ -381,9 +381,29 @@
         </div>
     </div>
 
-    <!-- TABELLEN-ANSICHT -->
+    <!-- SPIELTAGS-TABELLEN-ANSICHT (Spiele des aktuellen Spieltags mit Datum, Uhrzeit & Ergebnis) -->
     <div class="section-box">
-        <div class="section-header">Tabelle</div>
+        <div class="section-header" id="matchdayTableHeader">Spieltag 1 - Übersicht</div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 130px;">Termin</th>
+                        <th>Heimmannschaft</th>
+                        <th style="text-align: center; width: 90px;">Ergebnis</th>
+                        <th>Gastmannschaft</th>
+                    </tr>
+                </thead>
+                <tbody id="matchdayTableBody">
+                    <!-- Wird dynamisch gefüllt -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- GESAMT-TABELLEN-ANSICHT -->
+    <div class="section-box">
+        <div class="section-header">Tabelle (Gesamt)</div>
         <div class="table-container">
             <table>
                 <thead>
@@ -613,8 +633,10 @@
         document.getElementById('matchdayDisplay').textContent = `Spieltag ${league.currentMatchday}`;
         document.getElementById('adminMatchdayLabel').textContent = `Spieltag ${league.currentMatchday}`;
         document.getElementById('leagueSubtitle').textContent = `${league.name} — ${league.leagueName}`;
+        document.getElementById('matchdayTableHeader').textContent = `Spieltag ${league.currentMatchday} — Begegnungen & Ergebnisse`;
         
         renderMatches();
+        renderMatchdayTable();
         renderTable();
         if (isAdmin) renderInputForm();
     }
@@ -684,6 +706,66 @@
                 </div>
             `;
             container.appendChild(row);
+        });
+    }
+
+    function renderMatchdayTable() {
+        let league = getCurrentLeague();
+        let tbody = document.getElementById('matchdayTableBody');
+        tbody.innerHTML = '';
+
+        let defaultPairs = generateMatchdayPairs(league.teams, league.currentMatchday);
+        let existingMatches = league.matches[league.currentMatchday] || [];
+
+        if (defaultPairs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Spiele vorhanden.</td></tr>`;
+            return;
+        }
+
+        defaultPairs.forEach((pair) => {
+            let savedMatch = existingMatches.find(m => (m.home === pair.home && m.away === pair.away) || (m.home === pair.away && m.away === pair.home));
+            
+            let homeTeam = savedMatch ? savedMatch.home : pair.home;
+            let awayTeam = savedMatch ? savedMatch.away : pair.away;
+            let matchDate = savedMatch ? (savedMatch.date || '') : '';
+            let matchTime = savedMatch ? (savedMatch.time || '') : '';
+            
+            let hasResult = savedMatch && savedMatch.homeScore !== undefined && savedMatch.awayScore !== undefined;
+
+            let formattedDate = '-';
+            if (matchDate) {
+                if (matchDate.includes('-')) {
+                    let parts = matchDate.split('-');
+                    if (parts.length === 3) formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                } else {
+                    formattedDate = matchDate;
+                }
+            }
+            let timeStr = matchTime ? ` ${matchTime} Uhr` : '';
+            let dateDisplay = (matchDate || matchTime) ? `${formattedDate}${timeStr}` : '-';
+
+            let isHomeTvk2 = homeTeam.includes('TV Kapellen 1919 e.V. 2');
+            let isAwayTvk2 = awayTeam.includes('TV Kapellen 1919 e.V. 2');
+            let isHomeTvk3 = homeTeam.includes('TV Kapellen 1919 e.V. 3');
+            let isAwayTvk3 = awayTeam.includes('TV Kapellen 1919 e.V. 3');
+            let isHomeTvkGeneral = homeTeam.toLowerCase().includes('kapellen');
+            let isAwayTvkGeneral = awayTeam.toLowerCase().includes('kapellen');
+
+            let homeClass = isHomeTvk2 ? 'tvk-highlight-1' : (isHomeTvk3 ? 'tvk-highlight-2' : (isHomeTvkGeneral ? 'tvk-highlight-1' : ''));
+            let awayClass = isAwayTvk2 ? 'tvk-highlight-1' : (isAwayTvk3 ? 'tvk-highlight-2' : (isAwayTvkGeneral ? 'tvk-highlight-1' : ''));
+
+            let resultDisplay = hasResult 
+                ? `<strong>${savedMatch.homeScore}:${savedMatch.awayScore}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">S:${savedMatch.homeSets}:${savedMatch.awaySets} | L:${savedMatch.homeLegs}:${savedMatch.awayLegs}</span>` 
+                : `<span style="color: var(--text-muted); font-style: italic;">vs</span>`;
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-size: 0.8rem; color: var(--tvk-orange); white-space: nowrap;">📅 ${dateDisplay}</td>
+                <td class="${homeClass}" style="text-align: right;">${homeTeam}</td>
+                <td style="text-align: center; white-space: nowrap;">${resultDisplay}</td>
+                <td class="${awayClass}">${awayTeam}</td>
+            `;
+            tbody.appendChild(tr);
         });
     }
 
@@ -855,7 +937,7 @@
         for (let idx = 0; idx < defaultPairs.length; idx++) {
             let home = document.getElementById(`home_${idx}`).value;
             let away = document.getElementById(`away_${idx}`).value;
-            let date = document.getElementById(`date_${idx}`).value;
+            let date = document.getElementById(`date_${idx}`,).value;
             let time = document.getElementById(`time_${idx}`).value;
 
             let homeScore = parseInt(document.getElementById(`hs_${idx}`).value) || 0;
