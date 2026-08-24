@@ -17,6 +17,7 @@
             --accent-red: #ef5350;
             --tvk-orange: #ffa726;
             --tvk-blue: #42a5f5;
+            --tvk-green: #66bb6a;
         }
 
         * { box-sizing: border-box; }
@@ -164,6 +165,7 @@
 
         .tvk-highlight-1 { color: var(--tvk-orange) !important; font-weight: bold; }
         .tvk-highlight-2 { color: var(--tvk-blue) !important; font-weight: bold; }
+        .tvk-highlight-3 { color: var(--tvk-green) !important; font-weight: bold; }
 
         /* Tabellen-Ansicht */
         .table-container {
@@ -200,15 +202,20 @@
             color: #ef9a9a;
         }
 
-        tr.tvk-team-2 td {
+        tr.tvk-team-1 td {
             font-weight: bold;
             color: var(--tvk-orange);
             background: rgba(255, 167, 38, 0.06);
         }
-        tr.tvk-team-3 td {
+        tr.tvk-team-2 td {
             font-weight: bold;
             color: var(--tvk-blue);
             background: rgba(66, 165, 245, 0.06);
+        }
+        tr.tvk-team-3 td {
+            font-weight: bold;
+            color: var(--tvk-green);
+            background: rgba(102, 187, 106, 0.06);
         }
 
         /* Admin-Toggle-Button unten */
@@ -816,7 +823,7 @@
                     { home: "TV Kapellen 1919 e.V. 4 U18", away: "DC Herongen 2", date: "2027-04-23", time: "20:00" },
                     { home: "Gelderner DC 3 U18", away: "26er DC", date: "2027-04-24", time: "18:00" },
                     { home: "DC Herongen 1", away: "DC Ally Polly Mehrhoog 2", date: "2027-04-24", time: "19:00" },
-                    { home: "Berka Darts 1", away: "Berka Darts 2", date: "2027-04-24", time: "19:00" }
+                    { home: "Berka Darts 2", away: "Berka Darts 1", date: "2027-04-24", time: "19:00" }
                 ],
                 17: [
                     { home: "TV Kapellen 1919 e.V. 4 U18", away: "DC Ally Polly Mehrhoog 2", date: "2027-05-07", time: "20:00" },
@@ -980,11 +987,17 @@
             let timeStr = matchTime ? ` ${matchTime} Uhr` : '';
             let dateDisplay = (matchDate || matchTime) ? `📅 ${formattedDate}${timeStr}` : '-';
 
-            let isHomeTvk = homeTeam.includes('TV Kapellen');
-            let isAwayTvk = awayTeam.includes('TV Kapellen');
+            // Farbzuweisung für die Spieltags-Ansicht
+            let getTeamClass = (teamName) => {
+                if (teamName.includes('TV Kapellen 1919 e.V. 1')) return 'tvk-highlight-1';
+                if (teamName.includes('TV Kapellen 1919 e.V. 2')) return 'tvk-highlight-1';
+                if (teamName.includes('TV Kapellen 1919 e.V. 3')) return 'tvk-highlight-2';
+                if (teamName.includes('TV Kapellen 1919 e.V. 4')) return 'tvk-highlight-3';
+                return '';
+            };
 
-            let homeClass = isHomeTvk ? 'tvk-highlight-1' : '';
-            let awayClass = isAwayTvk ? 'tvk-highlight-1' : '';
+            let homeClass = getTeamClass(homeTeam);
+            let awayClass = getTeamClass(awayTeam);
 
             let resultDisplay = hasResult 
                 ? `<strong>${savedMatch.homeScore}:${savedMatch.awayScore}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">S:${savedMatch.homeSets}:${savedMatch.awaySets} | L:${savedMatch.homeLegs}:${savedMatch.awayLegs}</span>` 
@@ -1074,8 +1087,13 @@
                 tr.classList.add('rank-last');
             }
 
-            if (s.name.includes('TV Kapellen')) {
-                tr.classList.add('tvk-team-2');
+            // Farbzuweisung für die Gesamttabelle bei mehreren Kapellener Teams (z.B. Mannschaft 2 und 3)
+            if (s.name.includes('TV Kapellen 1919 e.V. 1') || s.name.includes('TV Kapellen 1919 e.V. 2')) {
+                tr.classList.add('tvk-team-1'); // Orange
+            } else if (s.name.includes('TV Kapellen 1919 e.V. 3')) {
+                tr.classList.add('tvk-team-2'); // Blau
+            } else if (s.name.includes('TV Kapellen 1919 e.V. 4')) {
+                tr.classList.add('tvk-team-3'); // Grün
             }
 
             let setDiff = s.setsW - s.setsL;
@@ -1137,6 +1155,7 @@
                         <label>Gastmannschaft</label>
                         <select id="away_${idx}" class="form-control">${optionsAway}</select>
                     </div>
+                    <div class="file-group">
                     <div class="form-group">
                         <label>Erg. H</label>
                         <input type="number" id="hs_${idx}" class="form-control" value="${existing.homeScore !== undefined ? existing.homeScore : 0}" min="0">
@@ -1182,7 +1201,7 @@
             let awayScore = parseInt(document.getElementById(`as_${idx}`).value) || 0;
             let homeSets = parseInt(document.getElementById(`hsets_${idx}`).value) || 0;
             let awaySets = parseInt(document.getElementById(`asets_${idx}`).value) || 0;
-            let homeLegs = parseInt(document.getElementById(`hlegs_${idx}`).value) || 0;
+            let homeLegs = parseInt(document.getElementById(`hlegs_${idx}`, 10).value) || 0;
             let awayLegs = parseInt(document.getElementById(`alegs_${idx}`).value) || 0;
 
             if (home !== away) {
