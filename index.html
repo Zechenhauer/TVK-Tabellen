@@ -603,24 +603,21 @@
         let tbody = document.getElementById('matchdayTableBody');
         tbody.innerHTML = '';
 
-        let defaultPairs = generateMatchdayPairs(league.teams, league.currentMatchday);
+        // Zeige nur Spiele an, die für diesen Spieltag tatsächlich gespeichert wurden
         let existingMatches = league.matches[league.currentMatchday] || [];
 
-        if (defaultPairs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Spiele vorhanden.</td></tr>`;
+        if (existingMatches.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Keine Spiele für Spieltag ${league.currentMatchday} erfasst.</td></tr>`;
             return;
         }
 
-        defaultPairs.forEach((pair, idx) => {
-            let savedMatch = existingMatches[idx] || existingMatches.find(m => (m.home === pair.home && m.away === pair.away) || (m.home === pair.away && m.away === pair.home));
+        existingMatches.forEach((savedMatch, idx) => {
+            let homeTeam = savedMatch.home;
+            let awayTeam = savedMatch.away;
+            let matchDate = savedMatch.date || '';
+            let matchTime = savedMatch.time || '';
             
-            let homeTeam = savedMatch ? savedMatch.home : pair.home;
-            let awayTeam = savedMatch ? savedMatch.away : pair.away;
-            let matchDate = savedMatch ? (savedMatch.date || '') : '';
-            let matchTime = savedMatch ? (savedMatch.time || '') : '';
-            
-            // Ein Ergebnis existiert nur, wenn es explizit gespeichert wurde und nicht alles 0 ist (oder explizit gesetzt)
-            let hasResult = savedMatch && savedMatch.homeScore !== undefined && savedMatch.awayScore !== undefined && 
+            let hasResult = savedMatch.homeScore !== undefined && savedMatch.awayScore !== undefined && 
                             !(savedMatch.homeScore === 0 && savedMatch.awayScore === 0 && savedMatch.homeSets === 0 && savedMatch.awaySets === 0 && savedMatch.homeLegs === 0 && savedMatch.awayLegs === 0);
 
             let formattedDate = '-';
@@ -649,7 +646,7 @@
                 ? `<strong>${savedMatch.homeScore}:${savedMatch.awayScore}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">S:${savedMatch.homeSets}:${savedMatch.awaySets} | L:${savedMatch.homeLegs}:${savedMatch.awayLegs}</span>` 
                 : `<span style="color: var(--text-muted); font-style: italic;">vs</span>`;
 
-            let deleteBtnHtml = (isAdmin && hasResult) ? `<button class="btn-danger" onclick="deleteMatchByIndex(${idx})" title="Löschen">✕</button>` : '';
+            let deleteBtnHtml = isAdmin ? `<button class="btn-danger" onclick="deleteMatchByIndex(${idx})" title="Löschen">✕</button>` : '';
 
             let tr = document.createElement('tr');
             tr.innerHTML = `
@@ -678,7 +675,6 @@
             matchdayList.forEach(m => {
                 if (!m || !stats[m.home] || !stats[m.away]) return;
                 
-                // Ignorieren, wenn keine echten Ergebnisse eingetragen wurden (alles 0)
                 if (m.homeScore === 0 && m.awayScore === 0 && m.homeSets === 0 && m.awaySets === 0 && m.homeLegs === 0 && m.awayLegs === 0) {
                     return;
                 }
@@ -765,11 +761,12 @@
         let container = document.getElementById('matchInputsContainer');
         container.innerHTML = '';
 
+        // Hier nutzen wir weiterhin den Generator, um dir beim Erfassen des neuen Spieltags die korrekten Paarungen vorzuschlagen
         let defaultPairs = generateMatchdayPairs(league.teams, league.currentMatchday);
         let existingMatches = league.matches[league.currentMatchday] || [];
 
         defaultPairs.forEach((pair, idx) => {
-            let existing = existingMatches[idx] || existingMatches.find(m => m.home === pair.home && m.away === pair.away) || {};
+            let existing = existingMatches[idx] || {};
 
             let homeTeam = existing.home || pair.home;
             let awayTeam = existing.away || pair.away;
@@ -848,6 +845,7 @@
             let awayLegs = parseInt(document.getElementById(`alegs_${idx}`).value) || 0;
 
             if (home !== away) {
+                newMatches.matches = newMatches.matches || [];
                 newMatches.push({ home, away, date, time, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
             }
         }
@@ -859,7 +857,7 @@
     function deleteMatchByIndex(matchIndex) {
         let league = getCurrentLeague();
         if (league.matches[league.currentMatchday] && league.matches[league.currentMatchday][matchIndex]) {
-            if (confirm(`Ergebnis für diese Begegnung wirklich löschen?`)) {
+            if (confirm(`Dieses Spiel wirklich löschen?`)) {
                 league.matches[league.currentMatchday].splice(matchIndex, 1);
                 saveAndSync();
             }
