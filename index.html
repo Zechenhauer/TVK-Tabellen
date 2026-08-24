@@ -418,7 +418,7 @@
         </div>
         
         <div id="matchInputsContainer">
-            <!-- Hier werden automatisch 4 bzw. 5 Begegnungen gerendert -->
+            <!-- Hier werden Begegnungen gerendert -->
         </div>
 
         <button class="btn" onclick="saveAllMatches()">Alle Ergebnisse für diesen Spieltag speichern</button>
@@ -434,7 +434,6 @@
     const BIN_ID = '6a703ae9da38895dfeb258db';
     const API_KEY = '$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS';
     
-    // Deines gewünschtes Admin-Passwort (hier anpassbar)
     const ADMIN_PIN = "1919";
     let isAdmin = false;
 
@@ -502,14 +501,13 @@
 
     let activeTeamIndex = 0;
 
-    // Admin-Modus Ein-/Ausschalten
     function toggleAdminMode() {
         const adminCard = document.getElementById('adminCard');
         
         if (isAdmin) {
             isAdmin = false;
             adminCard.style.display = 'none';
-            renderMatches(); // Löschen-Buttons ausblenden
+            renderMatches();
             return;
         }
 
@@ -523,7 +521,6 @@
         }
     }
 
-    // Hilfsfunktion: Erzeugt Paarungen für einen Spieltag (Round-Robin)
     function generateMatchdayPairs(teams, matchday) {
         let list = [...teams];
         if (list.length % 2 !== 0) list.push("Spielfrei");
@@ -627,35 +624,64 @@
         let container = document.getElementById('matchListContainer');
         container.innerHTML = '';
 
-        let matchdayMatches = league.matches[league.currentMatchday] || [];
+        let defaultPairs = generateMatchdayPairs(league.teams, league.currentMatchday);
+        let existingMatches = league.matches[league.currentMatchday] || [];
 
-        if (matchdayMatches.length === 0) {
-            container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px;">Noch keine Spiele für Spieltag ${league.currentMatchday} erfasst.</div>`;
+        if (defaultPairs.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Spiele für Spieltag ${league.currentMatchday} gefunden.</div>`;
             return;
         }
 
-        matchdayMatches.forEach((m, idx) => {
-            let isHomeTvk2 = m.home.includes('TV Kapellen 1919 e.V. 2');
-            let isAwayTvk2 = m.away.includes('TV Kapellen 1919 e.V. 2');
-            let isHomeTvk3 = m.home.includes('TV Kapellen 1919 e.V. 3');
-            let isAwayTvk3 = m.away.includes('TV Kapellen 1919 e.V. 3');
-            let isHomeTvkGeneral = m.home.toLowerCase().includes('kapellen');
-            let isAwayTvkGeneral = m.away.toLowerCase().includes('kapellen');
+        defaultPairs.forEach((pair, idx) => {
+            let savedMatch = existingMatches.find(m => (m.home === pair.home && m.away === pair.away) || (m.home === pair.away && m.away === pair.home));
+            
+            let homeTeam = savedMatch ? savedMatch.home : pair.home;
+            let awayTeam = savedMatch ? savedMatch.away : pair.away;
+            let matchDate = savedMatch ? (savedMatch.date || '') : '';
+            let matchTime = savedMatch ? (savedMatch.time || '') : '';
+            
+            let hasResult = savedMatch && savedMatch.homeScore !== undefined && savedMatch.awayScore !== undefined;
+
+            let isHomeTvk2 = homeTeam.includes('TV Kapellen 1919 e.V. 2');
+            let isAwayTvk2 = awayTeam.includes('TV Kapellen 1919 e.V. 2');
+            let isHomeTvk3 = homeTeam.includes('TV Kapellen 1919 e.V. 3');
+            let isAwayTvk3 = awayTeam.includes('TV Kapellen 1919 e.V. 3');
+            let isHomeTvkGeneral = homeTeam.toLowerCase().includes('kapellen');
+            let isAwayTvkGeneral = awayTeam.toLowerCase().includes('kapellen');
 
             let homeClass = isHomeTvk2 ? 'tvk-highlight-1' : (isHomeTvk3 ? 'tvk-highlight-2' : (isHomeTvkGeneral ? 'tvk-highlight-1' : ''));
             let awayClass = isAwayTvk2 ? 'tvk-highlight-1' : (isAwayTvk3 ? 'tvk-highlight-2' : (isAwayTvkGeneral ? 'tvk-highlight-1' : ''));
 
-            let deleteBtnHtml = isAdmin ? `<button class="btn-danger" onclick="deleteMatch(${idx})" title="Löschen" style="margin-left: 10px;">✕</button>` : '';
+            let deleteBtnHtml = (isAdmin && hasResult) ? `<button class="btn-danger" onclick="deleteMatchByTeams('${homeTeam}', '${awayTeam}')" title="Löschen" style="margin-left: 10px;">✕</button>` : '';
+
+            let resultHtml = hasResult 
+                ? `${savedMatch.homeScore}:${savedMatch.awayScore} | S:${savedMatch.homeSets}:${savedMatch.awaySets} | L:${savedMatch.homeLegs}:${savedMatch.awayLegs}`
+                : `<span style="color: var(--text-muted); font-style: italic;">vs</span>`;
+
+            let dateTimeHtml = '';
+            if (matchDate || matchTime) {
+                let formattedDate = matchDate;
+                if (matchDate && matchDate.includes('-')) {
+                    let parts = matchDate.split('-');
+                    if (parts.length === 3) formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                }
+                dateTimeHtml = `<div style="font-size: 0.7rem; color: var(--tvk-orange); margin-bottom: 4px; text-align: center;">📅 ${formattedDate} ${matchTime ? '🕒 ' + matchTime + ' Uhr' : ''}</div>`;
+            }
 
             let row = document.createElement('div');
             row.className = 'match-row';
+            row.style.flexDirection = 'column';
+            row.style.alignItems = 'stretch';
             row.innerHTML = `
-                <div class="match-teams">
-                    <div class="home-team ${homeClass}">${m.home}</div>
-                    <div class="match-result">${m.homeScore}:${m.awayScore} | S:${m.homeSets}:${m.awaySets} | L:${m.homeLegs}:${m.awayLegs}</div>
-                    <div class="away-team ${awayClass}">${m.away}</div>
+                ${dateTimeHtml}
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="match-teams" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div class="home-team ${homeClass}">${homeTeam}</div>
+                        <div class="match-result">${resultHtml}</div>
+                        <div class="away-team ${awayClass}">${awayTeam}</div>
+                    </div>
+                    ${deleteBtnHtml}
                 </div>
-                ${deleteBtnHtml}
             `;
             container.appendChild(row);
         });
@@ -765,6 +791,8 @@
 
             let homeTeam = existing.home || pair.home;
             let awayTeam = existing.away || pair.away;
+            let matchDate = existing.date || '';
+            let matchTime = existing.time || '';
 
             let card = document.createElement('div');
             card.className = 'match-input-card';
@@ -773,7 +801,13 @@
             let optionsAway = league.teams.map(t => `<option value="${t}" ${t === awayTeam ? 'selected' : ''}>${t}</option>`).join('');
 
             card.innerHTML = `
-                <div class="match-input-title">Begegnung ${idx + 1}</div>
+                <div class="match-input-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Begegnung ${idx + 1}</span>
+                    <div style="display: flex; gap: 10px; font-weight: normal;">
+                        <div><label style="font-size:0.6rem; color:var(--text-muted); margin:0;">Datum</label><input type="date" id="date_${idx}" class="form-control" style="padding: 2px 4px; font-size: 0.75rem;" value="${matchDate}"></div>
+                        <div><label style="font-size:0.6rem; color:var(--text-muted); margin:0;">Uhrzeit</label><input type="time" id="time_${idx}" class="form-control" style="padding: 2px 4px; font-size: 0.75rem;" value="${matchTime}"></div>
+                    </div>
+                </div>
                 <div class="form-grid">
                     <div class="form-group form-group-team">
                         <label>Heimmannschaft</label>
@@ -821,6 +855,8 @@
         for (let idx = 0; idx < defaultPairs.length; idx++) {
             let home = document.getElementById(`home_${idx}`).value;
             let away = document.getElementById(`away_${idx}`).value;
+            let date = document.getElementById(`date_${idx}`).value;
+            let time = document.getElementById(`time_${idx}`).value;
 
             let homeScore = parseInt(document.getElementById(`hs_${idx}`).value) || 0;
             let awayScore = parseInt(document.getElementById(`as_${idx}`).value) || 0;
@@ -830,7 +866,7 @@
             let awayLegs = parseInt(document.getElementById(`alegs_${idx}`).value) || 0;
 
             if (home !== away) {
-                newMatches.push({ home, away, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
+                newMatches.push({ home, away, date, time, homeScore, awayScore, homeSets, awaySets, homeLegs, awayLegs });
             }
         }
 
@@ -838,11 +874,13 @@
         saveAndSync();
     }
 
-    function deleteMatch(matchIndex) {
+    function deleteMatchByTeams(home, away) {
         let league = getCurrentLeague();
-        if (confirm('Dieses Spiel wirklich löschen?')) {
-            league.matches[league.currentMatchday].splice(matchIndex, 1);
-            saveAndSync();
+        if (league.matches[league.currentMatchday]) {
+            if (confirm(`Ergebnis für ${home} vs ${away} wirklich löschen?`)) {
+                league.matches[league.currentMatchday] = league.matches[league.currentMatchday].filter(m => !(m.home === home && m.away === away));
+                saveAndSync();
+            }
         }
     }
 
@@ -851,7 +889,6 @@
         saveToCloud();
     }
 
-    // Beim Start Daten aus Cloud laden
     loadFromCloud();
 </script>
 
