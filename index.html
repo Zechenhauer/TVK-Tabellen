@@ -329,7 +329,7 @@
         </div>
         <div class="team-tab" onclick="switchTeam(2)">
             4. Mannschaft
-            <span>Kreisliga 05</span>
+            <span>Kreisliga 10</span>
         </div>
     </div>
 
@@ -454,18 +454,18 @@
         },
         "team_4": {
             name: "4. Mannschaft",
-            leagueName: "Kreisliga 05",
+            leagueName: "Kreisliga 10",
             currentMatchday: 1,
             teams: [
-                "26er DC",
-                "Berka Darts 1",
-                "Berka Darts 2",
-                "DC Ally Polly Mehrhoog 2",
-                "DC Herongen 1",
-                "DC Herongen 2",
-                "Gelderner DC 3 U18",
-                "Gelderner DC 5",
-                "TV Kapellen 1919 e.V. 4 U18"
+                "Crefeld Steelers",
+                "Darts-Gemeinschaft Uerdingen 2",
+                "RDC East Enders 2",
+                "Ratinger Dart Legenden-Team 2",
+                "SDC Anrath 2",
+                "SV 1930 Rosellen e.V. 2",
+                "TSV Meerbusch Tungsten Titans",
+                "Team Independence Mönchengladbach 2001 e.V.",
+                "TV Kapellen 1919 e.V. 4"
             ],
             matches: {}
         }
@@ -612,7 +612,6 @@
         }
 
         defaultPairs.forEach((pair, idx) => {
-            // Nutze direkt das gespeicherte Spiel an diesem Index oder suche über die Paarung
             let savedMatch = existingMatches[idx] || existingMatches.find(m => (m.home === pair.home && m.away === pair.away) || (m.home === pair.away && m.away === pair.home));
             
             let homeTeam = savedMatch ? savedMatch.home : pair.home;
@@ -620,7 +619,9 @@
             let matchDate = savedMatch ? (savedMatch.date || '') : '';
             let matchTime = savedMatch ? (savedMatch.time || '') : '';
             
-            let hasResult = savedMatch && savedMatch.homeScore !== undefined && savedMatch.awayScore !== undefined;
+            // Ein Ergebnis existiert nur, wenn es explizit gespeichert wurde und nicht alles 0 ist (oder explizit gesetzt)
+            let hasResult = savedMatch && savedMatch.homeScore !== undefined && savedMatch.awayScore !== undefined && 
+                            !(savedMatch.homeScore === 0 && savedMatch.awayScore === 0 && savedMatch.homeSets === 0 && savedMatch.awaySets === 0 && savedMatch.homeLegs === 0 && savedMatch.awayLegs === 0);
 
             let formattedDate = '-';
             if (matchDate) {
@@ -676,7 +677,11 @@
             if (!Array.isArray(matchdayList)) return;
             matchdayList.forEach(m => {
                 if (!m || !stats[m.home] || !stats[m.away]) return;
-                if (m.homeScore === undefined || m.awayScore === undefined) return;
+                
+                // Ignorieren, wenn keine echten Ergebnisse eingetragen wurden (alles 0)
+                if (m.homeScore === 0 && m.awayScore === 0 && m.homeSets === 0 && m.awaySets === 0 && m.homeLegs === 0 && m.awayLegs === 0) {
+                    return;
+                }
 
                 stats[m.home].played++;
                 stats[m.away].played++;
@@ -855,7 +860,6 @@
         let league = getCurrentLeague();
         if (league.matches[league.currentMatchday] && league.matches[league.currentMatchday][matchIndex]) {
             if (confirm(`Ergebnis für diese Begegnung wirklich löschen?`)) {
-                // Setze das Ergebnis des Spiels zurück oder entferne es aus dem Array
                 league.matches[league.currentMatchday].splice(matchIndex, 1);
                 saveAndSync();
             }
